@@ -66,15 +66,17 @@ function activateAdmin(){
 }
 
 function createBoard(){
-  for(let i=1;i<=1000;i++){
-    const cell=document.createElement("div");
-    cell.textContent=i;
-    cell.className="cell";
-    cell.dataset.num=i;
-    setState(cell,data[i]||"available");
-    cell.onclick=()=>{if(isAdmin) toggle(cell);}
-    grid.appendChild(cell);
-  }
+  for(let i=0;i<=999;i++){
+  const cell=document.createElement("div");
+  // convertir número a 3 dígitos
+  const numero = i.toString().padStart(3, '0');
+  cell.textContent = numero;
+  cell.className="cell";
+  cell.dataset.num = numero;
+  setState(cell, data[numero] || "available");
+  cell.onclick = ()=>{ if(isAdmin) toggle(cell); }
+  grid.appendChild(cell);
+}
   updateStats();
 }
 
@@ -122,4 +124,5 @@ search.oninput=()=>{
 createBoard();
 </script>
 </body>
+
 </html>
