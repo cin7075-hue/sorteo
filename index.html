@@ -4,29 +4,45 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sorteo o Donación a Campaña de Farith Castro al Senado</title>
+
 <style>
 body {font-family: Arial, sans-serif; margin:0; background:#f5f7fa;}
+
 header {
   padding:15px;
-  background:#f57c00; /* naranja */
-  color:white; /* letras blancas */
+  background:#f57c00;
+  color:white;
   text-align:center;
 }
+
 .controls {padding:10px; background:white; position:sticky; top:0; z-index:2;}
-input {padding:6px; width:120px;}
 button {padding:6px 10px; margin:3px; border:none; border-radius:6px; cursor:pointer;}
-.grid {display:grid;grid-template-columns: repeat(auto-fill, minmax(45px,1fr));gap:5px;padding:10px;}
-.cell {padding:10px 0;text-align:center;border-radius:8px;font-weight:bold;user-select:none;transition:.2s;}
-.available {background:#ffffff; border:1px solid #ccc; cursor:not-allowed;}
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(45px,1fr));
+  gap:5px;
+  padding:10px;
+}
+
+.cell {
+  padding:10px 0;
+  text-align:center;
+  border-radius:8px;
+  font-weight:bold;
+  transition:.2s;
+  user-select:none;
+}
+
+.available {background:#ffffff; border:1px solid #ccc; cursor:pointer;}
 .reserved {background:#ffd54f;}
 .sold {background:#ef5350; color:white;}
-.admin .cell.available,
-.admin .cell.reserved {cursor:pointer;}
-.cell:hover {transform:scale(1.05);}
+
 .stats {margin-top:8px; font-size:14px;}
-.admin-indicator {color:green; font-weight:bold; margin-left:10px;}
+.admin-indicator {color:green; font-weight:bold;}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -36,8 +52,7 @@ button {padding:6px 10px; margin:3px; border:none; border-radius:6px; cursor:poi
 <div class="controls">
   <button onclick="activateAdmin()">🔒 Modo Administrador</button>
   <span id="adminStatus"></span><br><br>
-  Buscar número: <input type="number" id="search" min="1" max="1000">
-  <button onclick="exportSold()">Exportar Vendidos</button>
+  <button onclick="verCompradores()">Ver Compradores</button>
   <div class="stats">
     Disponibles: <span id="avail">0</span> |
     Reservados: <span id="res">0</span> |
@@ -53,30 +68,31 @@ let isAdmin = false;
 const grid = document.getElementById("grid");
 let data = JSON.parse(localStorage.getItem("rifaData")) || {};
 
-function save(){localStorage.setItem("rifaData", JSON.stringify(data));updateStats();}
+function save(){
+  localStorage.setItem("rifaData", JSON.stringify(data));
+  updateStats();
+}
 
 function activateAdmin(){
-  const pass = prompt("Introduce contraseña:");
+  const pass = prompt("Contraseña admin:");
   if(pass===PASSWORD){
     isAdmin=true;
-    document.body.classList.add("admin");
     adminStatus.textContent="MODO ADMIN ACTIVO";
     adminStatus.className="admin-indicator";
-  } else alert("Contraseña incorrecta");
+  } else alert("Incorrecta");
 }
 
 function createBoard(){
   for(let i=0;i<=999;i++){
-  const cell=document.createElement("div");
-  // convertir número a 3 dígitos
-  const numero = i.toString().padStart(3, '0');
-  cell.textContent = numero;
-  cell.className="cell";
-  cell.dataset.num = numero;
-  setState(cell, data[numero] || "available");
-  cell.onclick = ()=>{ if(isAdmin) toggle(cell); }
-  grid.appendChild(cell);
-}
+    const num = i.toString().padStart(3,'0');
+    const cell=document.createElement("div");
+    cell.textContent=num;
+    cell.className="cell";
+    cell.dataset.num=num;
+    setState(cell, data[num]?.state || "available");
+    cell.onclick=()=>toggle(cell);
+    grid.appendChild(cell);
+  }
   updateStats();
 }
 
@@ -87,43 +103,82 @@ function setState(cell,state){
 
 function toggle(cell){
   let num = cell.dataset.num;
-  let state = data[num] || "available";
+  let record = data[num] || { state: "available" };
 
-  // Ciclo completo para admin
-  if(state === "available") state = "reserved";
-  else if(state === "reserved") state = "sold";
-  else state = "available"; // si estaba vendido vuelve a libre
+  // 👤 Usuario normal reserva
+  if(!isAdmin){
+    if(record.state!=="available"){
+      alert("Número ocupado");
+      return;
+    }
 
-  data[num] = state;
-  setState(cell, state);
-  save();}
+    const nombre = prompt("Tu nombre:");
+    if(!nombre) return;
+
+    const telefono = prompt("Tu teléfono:");
+    if(!telefono) return;
+
+    data[num] = { state:"reserved", nombre, telefono };
+    setState(cell,"reserved");
+    save();
+    alert("Número reservado. Espera confirmación del administrador.");
+    return;
+  }
+
+  // 👑 Admin gestiona
+  if(record.state==="reserved"){
+    if(confirm(`Confirmar venta a ${record.nombre}?`)){
+      record.state="sold";
+      data[num]=record;
+    }
+  }
+  else if(record.state==="sold"){
+    if(confirm("¿Volver a disponible?")){
+      data[num]={ state:"available" };
+    }
+  }
+  else{
+    const nombre=prompt("Nombre:");
+    if(!nombre) return;
+    const telefono=prompt("Teléfono:");
+    if(!telefono) return;
+    data[num]={ state:"reserved", nombre, telefono };
+  }
+
+  setState(cell,data[num].state);
+  save();
+}
 
 function updateStats(){
   let a=0,r=0,s=0;
-  for(let i=1;i<=1000;i++){
-    let st=data[i]||"available";
+  for(let i=0;i<=999;i++){
+    let key=i.toString().padStart(3,'0');
+    let st=data[key]?.state||"available";
     if(st==="available")a++;
     if(st==="reserved")r++;
     if(st==="sold")s++;
   }
-  avail.textContent=a;res.textContent=r;sold.textContent=s;
+  avail.textContent=a;
+  res.textContent=r;
+  sold.textContent=s;
 }
 
-function exportSold(){
-  let soldNums=Object.keys(data).filter(n=>data[n]==="sold");
-  alert("Vendidos:\n"+soldNums.join(", "));
+function verCompradores(){
+  if(!isAdmin) return alert("Solo admin");
+  let lista="";
+  for(let n in data){
+    let r=data[n];
+    if(r.state!=="available"){
+      lista+=`${n} - ${r.nombre} - ${r.telefono} - ${r.state}\n`;
+    }
+  }
+  alert(lista||"Sin registros");
 }
-
-search.oninput=()=>{
-  let val=search.value;
-  document.querySelectorAll(".cell").forEach(c=>{
-    c.style.outline=c.dataset.num==val?"3px solid blue":"none";
-  });
-};
 
 createBoard();
 </script>
 </body>
-
 </html>
+</html>
+
 
