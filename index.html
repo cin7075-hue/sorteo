@@ -3,182 +3,124 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sorteo o Donación a Campaña de Farith Castro al Senado</title>
+<title>SORTEO FARITH CASTRO</title>
 
 <style>
-body {font-family: Arial, sans-serif; margin:0; background:#f5f7fa;}
-
-header {
-  padding:15px;
-  background:#f57c00;
-  color:white;
-  text-align:center;
-}
-
-.controls {padding:10px; background:white; position:sticky; top:0; z-index:2;}
-button {padding:6px 10px; margin:3px; border:none; border-radius:6px; cursor:pointer;}
-
-.grid {
-  display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(45px,1fr));
-  gap:5px;
-  padding:10px;
-}
-
-.cell {
-  padding:10px 0;
-  text-align:center;
-  border-radius:8px;
-  font-weight:bold;
-  transition:.2s;
-  user-select:none;
-}
-
-.available {background:#ffffff; border:1px solid #ccc; cursor:pointer;}
-.reserved {background:#ffd54f;}
-.sold {background:#ef5350; color:white;}
-
-.stats {margin-top:8px; font-size:14px;}
-.admin-indicator {color:green; font-weight:bold;}
+body{font-family:Arial;margin:0;background:#f5f7fa;}
+header{padding:15px;background:#f57c00;color:white;text-align:center;}
+.controls{padding:10px;background:white;position:sticky;top:0;z-index:2;}
+button{padding:6px 10px;margin:3px;border:none;border-radius:6px;cursor:pointer;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(45px,1fr));gap:5px;padding:10px;}
+.cell{padding:10px 0;text-align:center;border-radius:8px;font-weight:bold;}
+.available{background:#fff;border:1px solid #ccc;cursor:pointer;}
+.reserved{background:#ffd54f;}
+.sold{background:#ef5350;color:white;}
+.stats{margin-top:8px;font-size:14px;}
+.admin-indicator{color:green;font-weight:bold;}
 </style>
 </head>
 
 <body>
 
 <header>
-  <h2>🎟️ SORTEO / DONACIÓN A CAMPAÑA DE FARITH CASTRO AL SENADO</h2>
+<h2>🎟️ SORTEO / DONACIÓN FARITH CASTRO</h2>
 </header>
 
 <div class="controls">
-  <button onclick="activateAdmin()">🔒 Modo Administrador</button>
-  <span id="adminStatus"></span><br><br>
-  <button onclick="verCompradores()">Ver Compradores</button>
-  <div class="stats">
-    Disponibles: <span id="avail">0</span> |
-    Reservados: <span id="res">0</span> |
-    Vendidos: <span id="sold">0</span>
-  </div>
+<button onclick="activateAdmin()">🔒 Modo Admin</button>
+<span id="adminStatus"></span>
+<div class="stats">
+Disponibles: <span id="avail">0</span> |
+Reservados: <span id="res">0</span> |
+Vendidos: <span id="sold">0</span>
+</div>
 </div>
 
 <div class="grid" id="grid"></div>
 
-<script>
-const PASSWORD = "Changel2020";
-let isAdmin = false;
-const grid = document.getElementById("grid");
-let data = JSON.parse(localStorage.getItem("rifaData")) || {};
+<!-- 🔥 FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-function save(){
-  localStorage.setItem("rifaData", JSON.stringify(data));
-  updateStats();
-}
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDwmYt51VgHXOnleHm402ggVdRyXU5xBHI",
+  authDomain: "sorteo-farith.firebaseapp.com",
+  databaseURL: "https://sorteo-farith-default-rtdb.firebaseio.com",
+  projectId: "sorteo-farith",
+  storageBucket: "sorteo-farith.firebasestorage.app",
+  messagingSenderId: "522275314874",
+  appId: "1:522275314874:web:e303861bbe2a86ec67f683"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const PASSWORD="Changel2020";
+let isAdmin=false;
+const grid=document.getElementById("grid");
 
 function activateAdmin(){
-  const pass = prompt("Contraseña admin:");
-  if(pass===PASSWORD){
-    isAdmin=true;
-    adminStatus.textContent="MODO ADMIN ACTIVO";
-    adminStatus.className="admin-indicator";
-  } else alert("Incorrecta");
+let pass=prompt("Contraseña admin:");
+if(pass===PASSWORD){
+isAdmin=true;
+adminStatus.textContent="ADMIN ACTIVO";
+adminStatus.className="admin-indicator";
+}
 }
 
 function createBoard(){
-  for(let i=0;i<=999;i++){
-    const num = i.toString().padStart(3,'0');
-    const cell=document.createElement("div");
-    cell.textContent=num;
-    cell.className="cell";
-    cell.dataset.num=num;
-    setState(cell, data[num]?.state || "available");
-    cell.onclick=()=>toggle(cell);
-    grid.appendChild(cell);
-  }
-  updateStats();
+for(let i=0;i<=999;i++){
+let num=i.toString().padStart(3,'0');
+let cell=document.createElement("div");
+cell.textContent=num;
+cell.className="cell available";
+cell.dataset.num=num;
+cell.onclick=()=>toggle(num);
+grid.appendChild(cell);
 }
-
-function setState(cell,state){
-  cell.classList.remove("available","reserved","sold");
-  cell.classList.add(state);
 }
-
-function toggle(cell){
-  let num = cell.dataset.num;
-  let record = data[num] || { state: "available" };
-
-  // 👤 Usuario normal reserva
-  if(!isAdmin){
-    if(record.state!=="available"){
-      alert("Número ocupado");
-      return;
-    }
-
-    const nombre = prompt("Tu nombre:");
-    if(!nombre) return;
-
-    const telefono = prompt("Tu teléfono:");
-    if(!telefono) return;
-
-    data[num] = { state:"reserved", nombre, telefono };
-    setState(cell,"reserved");
-    save();
-    alert("Número reservado. Espera confirmación del administrador.");
-    return;
-  }
-
-  // 👑 Admin gestiona
-  if(record.state==="reserved"){
-    if(confirm(`Confirmar venta a ${record.nombre}?`)){
-      record.state="sold";
-      data[num]=record;
-    }
-  }
-  else if(record.state==="sold"){
-    if(confirm("¿Volver a disponible?")){
-      data[num]={ state:"available" };
-    }
-  }
-  else{
-    const nombre=prompt("Nombre:");
-    if(!nombre) return;
-    const telefono=prompt("Teléfono:");
-    if(!telefono) return;
-    data[num]={ state:"reserved", nombre, telefono };
-  }
-
-  setState(cell,data[num].state);
-  save();
-}
-
-function updateStats(){
-  let a=0,r=0,s=0;
-  for(let i=0;i<=999;i++){
-    let key=i.toString().padStart(3,'0');
-    let st=data[key]?.state||"available";
-    if(st==="available")a++;
-    if(st==="reserved")r++;
-    if(st==="sold")s++;
-  }
-  avail.textContent=a;
-  res.textContent=r;
-  sold.textContent=s;
-}
-
-function verCompradores(){
-  if(!isAdmin) return alert("Solo admin");
-  let lista="";
-  for(let n in data){
-    let r=data[n];
-    if(r.state!=="available"){
-      lista+=`${n} - ${r.nombre} - ${r.telefono} - ${r.state}\n`;
-    }
-  }
-  alert(lista||"Sin registros");
-}
-
 createBoard();
+
+function toggle(num){
+db.ref("rifa/"+num).once("value",snap=>{
+let record=snap.val()||{state:"available"};
+
+if(!isAdmin){
+if(record.state!=="available"){alert("Número ocupado");return;}
+let nombre=prompt("Tu nombre:"); if(!nombre)return;
+let telefono=prompt("Tu teléfono:"); if(!telefono)return;
+db.ref("rifa/"+num).set({state:"reserved",nombre,telefono});
+alert("Número reservado. Espera confirmación.");
+}
+else{
+if(record.state==="reserved"){record.state="sold";}
+else if(record.state==="sold"){record.state="available";}
+db.ref("rifa/"+num).set(record);
+}
+});
+}
+
+db.ref("rifa").on("value",snap=>{
+let data=snap.val()||{};
+let a=0,r=0,s=0;
+
+document.querySelectorAll(".cell").forEach(cell=>{
+let num=cell.dataset.num;
+let st=data[num]?.state||"available";
+cell.className="cell "+st;
+if(st==="available")a++;
+if(st==="reserved")r++;
+if(st==="sold")s++;
+});
+
+avail.textContent=a;
+res.textContent=r;
+sold.textContent=s;
+});
 </script>
 </body>
 </html>
-</html>
+
 
 
