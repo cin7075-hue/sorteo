@@ -12,11 +12,10 @@ header{padding:15px;background:#f57c00;color:#fff;text-align:center}
 input{padding:6px;margin:3px}
 button{padding:6px 10px;margin:3px;border:none;border-radius:6px;cursor:pointer}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:5px;padding:10px}
-.cell{padding:10px 0;text-align:center;border-radius:8px;font-weight:bold;cursor:pointer;transition:.2s}
+.cell{padding:10px 0;text-align:center;border-radius:8px;font-weight:bold;cursor:pointer}
 .available{background:#fff;border:1px solid #ccc}
 .reserved{background:#ffd54f}
 .sold{background:#ef5350;color:#fff}
-.stats{font-size:14px;margin-top:5px}
 </style>
 </head>
 
@@ -33,27 +32,19 @@ button{padding:6px 10px;margin:3px;border:none;border-radius:6px;cursor:pointer}
 
 <button onclick="activarAdmin()">🔒 Admin</button>
 <span id="adminPanel" style="display:none;">
-<button onclick="marcar('sold')">✅ Vendido</button>
-<button onclick="marcar('available')">♻ Liberar</button>
+<button onclick="cambiarEstado('sold')">✅ Vendido</button>
+<button onclick="cambiarEstado('available')">♻ Liberar</button>
 </span>
 
-<button onclick="descargarLista()">📋 Descargar compradores</button>
-
-<br>
-<input type="text" id="buscarNombre" placeholder="Buscar por nombre">
-<button onclick="buscar()">🔍</button>
-
-<div class="stats">
+<div>
 Disponibles: <span id="avail">0</span> |
 Reservados: <span id="res">0</span> |
-Vendidos: <span id="sold">0</span> |
-💰 Recaudado: $<span id="total">0</span> COP
+Vendidos: <span id="sold">0</span>
 </div>
 </div>
 
 <div class="grid" id="grid"></div>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
@@ -70,15 +61,14 @@ const db = firebase.database();
 
 let seleccionado=null;
 let isAdmin=false;
+let cache={};
 
 function activarAdmin(){
 let pass=prompt("Clave admin:");
 if(pass==="Changel2020"){
 isAdmin=true;
 document.getElementById("adminPanel").style.display="inline";
-alert("Modo administrador activado");
-}else{
-alert("Clave incorrecta");
+alert("Modo admin activado");
 }
 }
 
@@ -96,12 +86,12 @@ grid.appendChild(cell);
 
 function seleccionar(cell){
 document.querySelectorAll(".cell").forEach(c=>c.style.outline="none");
-cell.style.outline="3px solid #000";
+cell.style.outline="3px solid black";
 seleccionado=cell.dataset.num;
 }
 
 function guardarReserva(){
-if(!seleccionado) return alert("Selecciona un número");
+if(!seleccionado) return alert("Selecciona número");
 let nombre=document.getElementById("nombre").value;
 let telefono=document.getElementById("telefono").value;
 if(!nombre||!telefono) return alert("Faltan datos");
@@ -109,68 +99,43 @@ if(!nombre||!telefono) return alert("Faltan datos");
 db.ref("rifa/"+seleccionado).set({
 nombre,telefono,state:"reserved"
 });
-alert("Reserva enviada");
 }
 
-function marcar(estado){
+function cambiarEstado(nuevoEstado){
 if(!isAdmin) return;
-if(!seleccionado) return alert("Selecciona un número");
-db.ref("rifa/"+seleccionado+"/state").set(estado);
+if(!seleccionado) return alert("Selecciona número");
+
+let actual=cache[seleccionado]||{};
+db.ref("rifa/"+seleccionado).set({
+nombre:actual.nombre||"",
+telefono:actual.telefono||"",
+state:nuevoEstado
+});
 }
 
 db.ref("rifa").on("value",snap=>{
-let data=snap.val()||{};
-let a=0,r=0,s=0,total=0;
+cache=snap.val()||{};
+let a=0,r=0,s=0;
 
 document.querySelectorAll(".cell").forEach(c=>{
 let n=c.dataset.num;
-let info=data[n]||{state:"available"};
+let info=cache[n]||{state:"available"};
 c.className="cell "+info.state;
 
 if(info.state==="available") a++;
 if(info.state==="reserved") r++;
-if(info.state==="sold"){s++;total+=10000;}
+if(info.state==="sold") s++;
 });
 
 avail.textContent=a;
 res.textContent=r;
 sold.textContent=s;
-total.textContent=total.toLocaleString();
 });
-
-function descargarLista(){
-if(!isAdmin) return alert("Solo admin");
-db.ref("rifa").once("value",snap=>{
-let d=snap.val()||{};
-let csv="Numero,Nombre,Telefono,Estado\n";
-for(let n in d){
-csv+=`${n},${d[n].nombre||""},${d[n].telefono||""},${d[n].state}\n`;
-}
-let blob=new Blob([csv],{type:"text/csv"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="compradores.csv";
-a.click();
-});
-}
-
-function buscar(){
-let nombre=document.getElementById("buscarNombre").value.toLowerCase();
-db.ref("rifa").once("value",snap=>{
-let d=snap.val()||{};
-let res="";
-for(let n in d){
-if(d[n].nombre && d[n].nombre.toLowerCase().includes(nombre)){
-res+=`${n} - ${d[n].nombre} - ${d[n].telefono}\n`;
-}
-}
-alert(res||"No encontrado");
-});
-}
 </script>
 
 </body>
 </html>
+
 
 
 
