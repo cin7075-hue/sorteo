@@ -14,7 +14,6 @@ button{padding:6px 10px;margin:3px;border:none;border-radius:6px;cursor:pointer}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:5px;padding:10px}
 .cell{padding:10px 0;text-align:center;border-radius:8px;font-weight:bold;cursor:pointer}
 .available{background:#fff;border:1px solid #ccc}
-reserved{background:#ffd54f}
 .reserved{background:#ffd54f}
 .sold{background:#ef5350;color:#fff}
 </style>
@@ -99,7 +98,9 @@ let telefono=document.getElementById("telefono").value;
 if(!nombre||!telefono) return alert("Faltan datos");
 
 db.ref("rifa/"+seleccionado).set({
-nombre,telefono,state:"reserved"
+nombre:nombre,
+telefono:telefono,
+state:"reserved"
 });
 }
 
@@ -109,8 +110,8 @@ if(!seleccionado) return alert("Selecciona número");
 
 let actual=cache[seleccionado]||{};
 db.ref("rifa/"+seleccionado).set({
-nombre:actual.nombre||"",
-telefono:actual.telefono||"",
+nombre:actual.nombre||"SIN NOMBRE",
+telefono:actual.telefono||"SIN TEL",
 state:nuevoEstado
 });
 }
@@ -122,9 +123,7 @@ let csv="Numero,Nombre,Telefono,Estado\n";
 
 for(let num in cache){
 let r=cache[num];
-if(r.nombre || r.telefono){
-csv+=`${num},${r.nombre||""},${r.telefono||""},${r.state||""}\n`;
-}
+csv+=`${num},${r.nombre||"SIN NOMBRE"},${r.telefono||"SIN TEL"},${r.state||""}\n`;
 }
 
 let blob=new Blob([csv],{type:"text/csv"});
@@ -156,6 +155,7 @@ sold.textContent=s;
 
 </body>
 </html>
+
 
 
 
